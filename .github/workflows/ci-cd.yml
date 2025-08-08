@@ -1,0 +1,83 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test and Build
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Run tests
+      run: npm test
+      continue-on-error: false
+      
+    - name: Build application
+      run: npm run build --if-present
+      
+    - name: Run linting
+      run: npm run lint --if-present
+
+  create-pr:
+    needs: test
+    runs-on: ubuntu-latest
+    name: Create Pull Request
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        base: main
+        head: develop
+        title: "🚀 Deploy: Merge develop into main"
+        body: |
+          ## 📋 Resumo das alterações
+          
+          Este PR foi criado automaticamente após push na branch `develop`.
+          
+          ### ✅ Verificações realizadas:
+          - [x] Testes executados com sucesso
+          - [x] Build realizado sem erros
+          - [x] Linting aprovado
+          
+          ### 🔍 Alterações incluídas:
+          - Todas as alterações da branch `develop`
+          
+          ### 📝 Instruções para revisão:
+          1. Revisar as alterações no código
+          2. Verificar se os testes estão passando
+          3. Aprovar e fazer merge se tudo estiver correto
+          
+          ---
+          
+          **Projeto:** Conversão de Temperatura (NodeJS - Porta 8080)
+          
+          **Criado automaticamente pela pipeline CI/CD** 🤖
+        labels: |
+          automated-pr
+          deploy
+          develop-to-main
+        draft: false
+        delete-branch: false
