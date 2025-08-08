@@ -119,6 +119,7 @@ jobs:
         
         **Criado automaticamente pela pipeline CI/CD** 🤖
         EOF
-        )" \
-            --label "automated-pr,deploy,develop-to-main"
+        )"
+          
+          echo "PR criado com sucesso!"
         fi
