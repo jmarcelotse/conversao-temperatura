@@ -56,10 +56,14 @@ jobs:
         
     - name: Create Pull Request
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      run: |
+    - name: Create Pull Request
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
       run: |
         # Verificar se já existe um PR aberto de develop para main
-        existing_pr=$(gh pr list --base main --head develop --json number --jq '.[0].number')
+        existing_pr=$(gh pr list --base main --head develop --json number --jq '.[0].number' 2>/dev/null || echo "null")
         
         if [ "$existing_pr" != "null" ] && [ -n "$existing_pr" ]; then
           echo "PR já existe: #$existing_pr"
@@ -88,10 +92,10 @@ jobs:
         
         **Atualizado automaticamente pela pipeline CI/CD** 🤖
         EOF
-        )"
+        )" 2>/dev/null || echo "Erro ao atualizar PR existente"
         else
-          echo "Criando novo PR..."
-          gh pr create \
+          echo "Tentando criar novo PR..."
+          if ! gh pr create \
             --base main \
             --head develop \
             --title "🚀 Deploy: Merge develop into main" \
@@ -119,7 +123,21 @@ jobs:
         
         **Criado automaticamente pela pipeline CI/CD** 🤖
         EOF
-        )"
-          
-          echo "PR criado com sucesso!"
+        )" 2>/dev/null; then
+            echo "Falha ao criar PR com gh CLI. Tentando método alternativo..."
+            
+            # Método alternativo usando curl e GitHub API
+            curl -X POST \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/$GITHUB_REPOSITORY/pulls \
+              -d '{
+                "title": "🚀 Deploy: Merge develop into main",
+                "head": "develop",
+                "base": "main",
+                "body": "## 📋 Resumo das alterações\n\nEste PR foi criado automaticamente após push na branch `develop`.\n\n### ✅ Verificações realizadas:\n- [x] Testes executados com sucesso\n- [x] Build realizado sem erros\n- [x] Linting aprovado\n\n### 🔍 Alterações incluídas:\n- Todas as alterações da branch `develop`\n\n### 📝 Instruções para revisão:\n1. Revisar as alterações no código\n2. Verificar se os testes estão passando\n3. Aprovar e fazer merge se tudo estiver correto\n\n---\n\n**Projeto:** Conversão de Temperatura (NodeJS - Porta 8080)\n\n**Criado automaticamente pela pipeline CI/CD** 🤖"
+              }' || echo "Erro ao criar PR via API"
+          else
+            echo "PR criado com sucesso via gh CLI!"
+          fi
         fi
