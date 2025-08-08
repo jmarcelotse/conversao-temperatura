@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -38,6 +43,10 @@ jobs:
     runs-on: ubuntu-latest
     name: Create Pull Request
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     
     steps:
     - name: Checkout code
@@ -46,34 +55,70 @@ jobs:
         fetch-depth: 0
         
     - name: Create Pull Request
-      uses: repo-sync/pull-request@v2
-      with:
-        source_branch: develop
-        destination_branch: main
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        pr_title: "🚀 Deploy: Merge develop into main"
-        pr_body: |
-          ## 📋 Resumo das alterações
-          
-          Este PR foi criado automaticamente após push na branch `develop`.
-          
-          ### ✅ Verificações realizadas:
-          - [x] Testes executados com sucesso
-          - [x] Build realizado sem erros
-          - [x] Linting aprovado
-          
-          ### 🔍 Alterações incluídas:
-          - Todas as alterações da branch `develop`
-          
-          ### 📝 Instruções para revisão:
-          1. Revisar as alterações no código
-          2. Verificar se os testes estão passando
-          3. Aprovar e fazer merge se tudo estiver correto
-          
-          ---
-          
-          **Projeto:** Conversão de Temperatura (NodeJS - Porta 8080)
-          
-          **Criado automaticamente pela pipeline CI/CD** 🤖
-        pr_label: "automated-pr,deploy,develop-to-main"
-        pr_draft: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Verificar se já existe um PR aberto de develop para main
+        existing_pr=$(gh pr list --base main --head develop --json number --jq '.[0].number')
+        
+        if [ "$existing_pr" != "null" ] && [ -n "$existing_pr" ]; then
+          echo "PR já existe: #$existing_pr"
+          echo "Atualizando PR existente..."
+          gh pr edit $existing_pr --title "🚀 Deploy: Merge develop into main" --body "$(cat << 'EOF'
+        ## 📋 Resumo das alterações
+        
+        Este PR foi criado automaticamente após push na branch \`develop\`.
+        
+        ### ✅ Verificações realizadas:
+        - [x] Testes executados com sucesso
+        - [x] Build realizado sem erros
+        - [x] Linting aprovado
+        
+        ### 🔍 Alterações incluídas:
+        - Todas as alterações da branch \`develop\`
+        
+        ### 📝 Instruções para revisão:
+        1. Revisar as alterações no código
+        2. Verificar se os testes estão passando
+        3. Aprovar e fazer merge se tudo estiver correto
+        
+        ---
+        
+        **Projeto:** Conversão de Temperatura (NodeJS - Porta 8080)
+        
+        **Atualizado automaticamente pela pipeline CI/CD** 🤖
+        EOF
+        )"
+        else
+          echo "Criando novo PR..."
+          gh pr create \
+            --base main \
+            --head develop \
+            --title "🚀 Deploy: Merge develop into main" \
+            --body "$(cat << 'EOF'
+        ## 📋 Resumo das alterações
+        
+        Este PR foi criado automaticamente após push na branch \`develop\`.
+        
+        ### ✅ Verificações realizadas:
+        - [x] Testes executados com sucesso
+        - [x] Build realizado sem erros
+        - [x] Linting aprovado
+        
+        ### 🔍 Alterações incluídas:
+        - Todas as alterações da branch \`develop\`
+        
+        ### 📝 Instruções para revisão:
+        1. Revisar as alterações no código
+        2. Verificar se os testes estão passando
+        3. Aprovar e fazer merge se tudo estiver correto
+        
+        ---
+        
+        **Projeto:** Conversão de Temperatura (NodeJS - Porta 8080)
+        
+        **Criado automaticamente pela pipeline CI/CD** 🤖
+        EOF
+        )" \
+            --label "automated-pr,deploy,develop-to-main"
+        fi
