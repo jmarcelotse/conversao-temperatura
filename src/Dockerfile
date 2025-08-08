@@ -22,4 +22,4 @@ EXPOSE 8080
 USER node
 
 # Comando para iniciar a aplicação
-CMD ["node", "src/app.js"]
+CMD ["node", "server.js"]
