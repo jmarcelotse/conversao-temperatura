@@ -46,13 +46,13 @@ jobs:
         fetch-depth: 0
         
     - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v5
+      uses: repo-sync/pull-request@v2
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        base: main
-        head: develop
-        title: "🚀 Deploy: Merge develop into main"
-        body: |
+        source_branch: develop
+        destination_branch: main
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pr_title: "🚀 Deploy: Merge develop into main"
+        pr_body: |
           ## 📋 Resumo das alterações
           
           Este PR foi criado automaticamente após push na branch `develop`.
@@ -75,9 +75,5 @@ jobs:
           **Projeto:** Conversão de Temperatura (NodeJS - Porta 8080)
           
           **Criado automaticamente pela pipeline CI/CD** 🤖
-        labels: |
-          automated-pr
-          deploy
-          develop-to-main
-        draft: false
-        delete-branch: false
+        pr_label: "automated-pr,deploy,develop-to-main"
+        pr_draft: false
